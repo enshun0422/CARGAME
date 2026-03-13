@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="CARGAME.vcxproj" Id="599e6e1c-b60e-4854-b319-826715b1451c" />
+</Solution>
