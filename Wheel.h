@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 class Wheel {
 public:
@@ -12,5 +12,7 @@ public:
         angularVel += angularAccel * dt;
     }
 
-    float getVelocity() { return angularVel * radius; }
+    float getVelocity() { 
+        return angularVel * radius; 
+    }
 };

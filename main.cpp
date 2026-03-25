@@ -21,4 +21,15 @@ int main() {
     std::cout << "Simulation finished. Press Enter to exit...";
     std::cin.get();
     return 0;
+    //Vehicle car;
+    //float dt = 0.016f; // 假設 60 FPS
+
+    //std::cout << "Accelerate starting..." << std::endl;
+    //for (int i = 0; i < 100; i++) {
+    //    car.applyThrottle(1.0f, dt); // 油門踩到底
+    //    if (i % 10 == 0) {
+    //        std::cout << "Corrent Speed: " << car.getKPH() << " km/h" << std::endl;
+    //    }
+    //}
+    //return 0;
 }

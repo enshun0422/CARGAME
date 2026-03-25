@@ -3,6 +3,18 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+
+# --- My Custom Rules for CARGAME ---
+out/
+build/
+bin/
+*.vcxproj
+*.vcxproj.filters
+*.slnx
+*.vcxproj.user
+.vs/
+# ----------------------------------
+
 # User-specific files
 *.rsuser
 *.suo
