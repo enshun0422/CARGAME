@@ -1,35 +1,44 @@
 ﻿#include <iostream>
-#include <Windows.h>
+#include <iomanip>
 #include "Vehicle.h"
 
 int main() {
-    SetConsoleOutputCP(65001);
+    Vehicle myCar;
+    float dt = 0.016f;    // 模擬 60 FPS 的物理更新頻率
+    float timer = 0.0f;
+    float throttle = 0.0f;
 
-    Vehicle car;
-    float dt = 0.01f; // 每一幀模擬 0.01 秒
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "Time(s) | Throttle | KPH    | SlipRatio | WheelVel(m/s)" << std::endl;
+    std::cout << "--------------------------------------------------------" << std::endl;
 
-    std::cout << "--- Starting Vehicle Physics Simulation ---" << std::endl;
+    for (int i = 0; i < 300; ++i) { // 模擬 5 秒鐘 (300 * 0.016)
+        timer = i * dt;
 
-    for (int i = 0; i < 100; ++i) {
-        car.applyThrottle(1.0f, dt); // 踩油門
-        if (i % 10 == 0) {
-            std::cout << "Time: " << i * dt << "s, speed: " << car.getKPH() << " km/h" << std::endl;
+        // 測試場景邏輯
+        if (timer < 0.5f) {
+            throttle = 0.0f; // 靜止
+        }
+        else if (timer < 3.5f) {
+            throttle = 1.0f; // 全油門加速
+        }
+        else {
+            throttle = 0.0f; // 放開油門滑行
+        }
+
+        // 執行車輛物理更新
+        myCar.applyThrottle(throttle, dt);
+
+        // 每隔 0.2 秒輸出一次數據以便觀察
+        if (i % 12 == 0) {
+           std::cout<< timer << "    | " 
+                     << throttle << "      | " 
+                     << myCar.getKPH() << " | " 
+                     << myCar.wheels[2].getSlipRatio() << "     | " 
+			   << myCar.wheels[2].getTireVelocity() << std::endl;
         }
     }
+        
 
-    std::cout << "------------------------------------------" << std::endl;
-    std::cout << "Simulation finished. Press Enter to exit...";
-    std::cin.get();
     return 0;
-    //Vehicle car;
-    //float dt = 0.016f; // 假設 60 FPS
-
-    //std::cout << "Accelerate starting..." << std::endl;
-    //for (int i = 0; i < 100; i++) {
-    //    car.applyThrottle(1.0f, dt); // 油門踩到底
-    //    if (i % 10 == 0) {
-    //        std::cout << "Corrent Speed: " << car.getKPH() << " km/h" << std::endl;
-    //    }
-    //}
-    //return 0;
 }

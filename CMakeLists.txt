@@ -10,4 +10,4 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # 告訴 CMake 哪些檔案要編譯成執行檔
 # 如果你之後增加了 Wheel.cpp 也要加在這裡
-add_executable(CarGame main.cpp "CARGAME/Wheel.cpp")
+add_executable(CarGame main.cpp Vehicle.cpp Wheel.cpp)
