@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+﻿cmake_minimum_required(VERSION 3.10)
 project(CarSimulator)
 
 # 設定 C++ 標準
@@ -10,4 +10,4 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # 告訴 CMake 哪些檔案要編譯成執行檔
 # 如果你之後增加了 Wheel.cpp 也要加在這裡
-add_executable(CarGame main.cpp)
+add_executable(CarGame main.cpp "CARGAME/Wheel.cpp")
