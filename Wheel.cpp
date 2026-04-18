@@ -1,10 +1,17 @@
 ﻿#include "Wheel.h"
-#include "Vehicle.h"
-#include <iostream>
-#include <cmath>
 
-void Wheel::update(float driveTorque, float dt) {
-	float frictionTorque = Fx * radius; // 摩擦力轉換為扭矩
+
+void Wheel::setFriction(float friction) {
+	fabsf(friction) < 0.01f ? this->roadFriction = 0.0f : this->roadFriction = friction; // 避免過小的摩擦力導致反轉
+
+}
+
+void Wheel::setBreakingForce(float breakingForce) {
+	fabsf(breakingForce) < 0.01f ? this->breakingForce = 0.0f : this->breakingForce = breakingForce; // 避免過小的制動力導致反轉
+}
+
+/*void Wheel::update(float driveTorque, float dt) {
+	float frictionTorque = friction * radius; // 摩擦力轉換為扭矩
     
 	float netTorque = driveTorque - frictionTorque; // 扣除摩擦力後的淨扭矩
 
@@ -15,53 +22,55 @@ void Wheel::update(float driveTorque, float dt) {
     if (std::abs(angularVel) < 0.01f) {
         angularVel = 0.0f; // 防止反轉
 	}
+}*/
+
+float Wheel::calculateAngularAcceleration(float driveTorque) {
+	float frictionTorque = roadFriction * radius; // 摩擦力轉換為扭矩
+	float breakingTorque = breakingForce * radius; // 制動力轉換為扭矩
+	
+	float netTorque = driveTorque - frictionTorque - breakingTorque; // 扣除摩擦力和制動力後的淨扭矩
+	float angularAccel = netTorque / inertia;//∑Torque = I * alpha -> alpha = Torque / I
+	return angularAccel;
 }
 
-float Wheel::getTireVelocity() {
+void Wheel::integrateRotation(float driveTorque, float dt) {
+    // 1. 先算出原本的角加速度與「預計」的新角速度
+    float accel = calculateAngularAcceleration(driveTorque);
+    float newAngularVel = angularVel + accel * dt;
+
+    // 2. 數值震盪保護機制 (針對加速狀態)
+    // 如果我們正在踩油門 (driveTorque > 0)，且原本輪子是往前轉的 (angularVel >= 0)
+    // 但算出來的新輪速卻變成負的 (newAngularVel < 0)
+    // 代表「地面摩擦力太大了，過度修正了！」
+    if (driveTorque > 0.0f && angularVel >= 0.0f && newAngularVel < 0.0f) {
+        // 強制把輪速限制在 0 (或是極微小的正數)，不准它倒轉
+        newAngularVel = 0.001f;
+    }
+
+    // 3. 數值震盪保護機制 (針對煞車狀態)
+    // 同理，如果沒踩油門但在重煞車，輪速也不該從正的瞬間變成負的
+    if (driveTorque == 0.0f && angularVel >= 0.0f && newAngularVel < 0.0f) {
+        newAngularVel = 0.0f; // 煞車最多只能煞到停，不能倒車
+    }
+
+    // 更新真正受保護的角速度
+    angularVel = newAngularVel;
+
+    // 更新角位置與切線速度
+    rotationAngle += angularVel * dt;
+    rotationAngle = fmodf(rotationAngle, 2.0f * 3.141592);
+    tangentialVelocity = angularVel * radius;
+}
+
+float Wheel::getNetTorque(float driveTorque) const {
+	float netTorque = driveTorque - roadFriction * radius - breakingForce * radius; // 摩擦力轉換為扭矩後扣除
+	return netTorque;
+}
+
+float Wheel::getTireVelocity() const {
     return angularVel * radius;
 }
 
-float Wheel::calculslipRatio(float forwardVelocity) {
-    float wheelV = getTireVelocity();
-    // 只要確保分母不為 0 即可，使用物理上較穩定的參考速度
-    float referenceSpeed = std::max(std::abs(forwardVelocity), 1.0f);
-    slipRatio = (wheelV - forwardVelocity) / referenceSpeed;
-    return slipRatio;
-}
 
-float Wheel::updateSlipState() {
-	Fx = slipRatio * 1000.0f; 
-	return Fx;
-    /*
-    *簡化的摩擦力模型，實際應該根據輪胎特性曲線計算。此處的
-    *係指(Slip Stiffness)。在後續優化中，將引入 Pacejka Magic Formula，
-    *透過非線性函數來模擬輪胎在極限狀態下的失速與打滑特性。
-    */ 
-    
-}
-/*備用版本，使用 Pacejka Magic Formula 計算縱向力 Fx，提供更真實的輪胎行為模擬。
-void Wheel::updateSlipState() {
-    float Fz = 3000.0f; // 假設載重
-    this->Fx = calculatePacejkaFx(this->slipRatio, Fz);
-}
-*/
 
-/**備用
- * 
- * @brief 計算縱向力 Fx (Magic Formula 簡化版)
- * @param s 滑移率 (slipRatio)，通常在 -1.0 到 1.0 之間
- * @param Fz 垂直載重 (垂直壓在輪胎上的力)，這會決定抓地力上限
- */
-float Wheel::calculatePacejkaFx(float s, float Fz) {
-    // --- 這裡的四個參數決定了輪胎的性格 ---
-    float B = 10.0f;  // Stiffness Factor (剛性因子)：數值越大，斜率越陡（越靈敏）
-    float C = 1.5f;   // Shape Factor (形狀因子)：通常固定在 1.5 左右，決定曲線形狀
-    float D = 1.0f;   // Peak Factor (峰值因子)：代表摩擦係數 (mu)，1.0 是一般輪胎
-    float E = 0.97f;  // Curvature Factor (曲率因子)：影響過頂點後的下降坡度
 
-    // 計算公式：Fx = Fz * D * sin(C * atan(B*s - E * (B*s - atan(B*s))))
-    float Bs = B * s;
-    float force = Fz * D * sin(C * atan(Bs - E * (Bs - atan(Bs))));
-
-    return force;
-}
