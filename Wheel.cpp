@@ -10,19 +10,6 @@ void Wheel::setBreakingForce(float breakingForce) {
 	fabsf(breakingForce) < 0.01f ? this->breakingForce = 0.0f : this->breakingForce = breakingForce; // 避免過小的制動力導致反轉
 }
 
-/*void Wheel::update(float driveTorque, float dt) {
-	float frictionTorque = friction * radius; // 摩擦力轉換為扭矩
-    
-	float netTorque = driveTorque - frictionTorque; // 扣除摩擦力後的淨扭矩
-
-	float angularAccel = netTorque / inertia;//∑Torque = I * alpha -> alpha = Torque / I
-    
-    angularVel += angularAccel * dt;
-
-    if (std::abs(angularVel) < 0.01f) {
-        angularVel = 0.0f; // 防止反轉
-	}
-}*/
 
 float Wheel::calculateAngularAcceleration(float driveTorque) {
 	float frictionTorque = roadFriction * radius; // 摩擦力轉換為扭矩
@@ -62,10 +49,6 @@ void Wheel::integrateRotation(float driveTorque, float dt) {
     tangentialVelocity = angularVel * radius;
 }
 
-float Wheel::getNetTorque(float driveTorque) const {
-	float netTorque = driveTorque - roadFriction * radius - breakingForce * radius; // 摩擦力轉換為扭矩後扣除
-	return netTorque;
-}
 
 float Wheel::getTireVelocity() const {
     return angularVel * radius;

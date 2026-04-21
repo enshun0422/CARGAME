@@ -15,10 +15,10 @@ class TireDynamics {
 		float slipRatio = 0.0f; // 打滑比率 Slip Ratio
 		float slipAngle = 0.0f; // 滑移角 Slip Angle
 
-		static constexpr float Default_B = 10.0f; // 剛性因子 Stiffness Factor
-		static constexpr float Default_C = 1.5f; // 形狀因子 Shape Factor
-		static constexpr float Default_D = 1.0f; // 峰值因子 Peak Factor
-		static constexpr float Default_E = 0.97; // 曲率因子 Curvature Factor
+		static constexpr float Default_B = 10.0f; // 剛性因子 Stiffness Factor (決定滑移率對摩擦力的敏感度)
+		static constexpr float Default_C = 1.5f; // 形狀因子 Shape Factor (決定抓地力曲線後段的陡峭程度)
+		static constexpr float Default_D = 1.0f; // 峰值因子 Peak Factor (決定最大摩擦力)
+		static constexpr float Default_E = 0.97; // 曲率因子 Curvature Factor (決定抓地力極限的容錯率)
 	public:
 		Wheel wheel;
 		void setLongitudinalForce(float fx);
