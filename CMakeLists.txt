@@ -9,5 +9,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # 告訴 CMake 哪些檔案要編譯成執行檔
-# 如果你之後增加了 Wheel.cpp 也要加在這裡
-add_executable(CarGame main.cpp Vehicle.cpp Wheel.cpp AeroDynamics.cpp TireDynamics.cpp)
+add_executable(CarGame main.cpp Vehicle.cpp Tire.cpp AeroDynamics.cpp TireDynamics.cpp)

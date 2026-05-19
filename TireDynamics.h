@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Wheel.h"
+#include "Tire.h"
 #include <iostream>
 #include <cmath>
 
@@ -20,7 +20,7 @@ class TireDynamics {
 		static constexpr float Default_D = 1.0f; // 峰值因子 Peak Factor (決定最大摩擦力)
 		static constexpr float Default_E = 0.97; // 曲率因子 Curvature Factor (決定抓地力極限的容錯率)
 	public:
-		Wheel wheel;
+		Tire tire;
 		void setLongitudinalForce(float fx);
 		void setLateralForce(float fy);
 		void setVerticalLoad(float load);//Fz

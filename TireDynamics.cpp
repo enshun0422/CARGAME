@@ -22,10 +22,10 @@ float TireDynamics::calculatePacejkaFx(float s, float Fz, float B, float C, floa
 }
 
 float TireDynamics::calculslipRatio(float forwardVelocity) {
-	float wheelV = wheel.getTireVelocity();
+	float tireV = tire.getTireVelocity();
 	// 只要確保分母不為 0 即可，使用物理上較穩定的參考速度
 	float referenceSpeed = std::max(std::abs(forwardVelocity), 1.0f);
-	slipRatio = (wheelV - forwardVelocity) / referenceSpeed;
+	slipRatio = (tireV - forwardVelocity) / referenceSpeed;
 	return slipRatio;
 }
 

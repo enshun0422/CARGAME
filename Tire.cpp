@@ -1,17 +1,17 @@
-﻿#include "Wheel.h"
+﻿#include "Tire.h"
 
 
-void Wheel::setFriction(float friction) {
+void Tire::setFriction(float friction) {
 	fabsf(friction) < 0.01f ? this->roadFriction = 0.0f : this->roadFriction = friction; // 避免過小的摩擦力導致反轉
 
 }
 
-void Wheel::setBreakingForce(float breakingForce) {
+void Tire::setBreakingForce(float breakingForce) {
 	fabsf(breakingForce) < 0.01f ? this->breakingForce = 0.0f : this->breakingForce = breakingForce; // 避免過小的制動力導致反轉
 }
 
 
-float Wheel::calculateAngularAcceleration(float driveTorque) {
+float Tire::calculateAngularAcceleration(float driveTorque) {
 	float frictionTorque = roadFriction * radius; // 摩擦力轉換為扭矩
 	float breakingTorque = breakingForce * radius; // 制動力轉換為扭矩
 	
@@ -20,7 +20,7 @@ float Wheel::calculateAngularAcceleration(float driveTorque) {
 	return angularAccel;
 }
 
-void Wheel::integrateRotation(float driveTorque, float dt) {
+void Tire::integrateRotation(float driveTorque, float dt) {
     // 1. 先算出原本的角加速度與「預計」的新角速度
     float accel = calculateAngularAcceleration(driveTorque);
     float newAngularVel = angularVel + accel * dt;
@@ -50,7 +50,7 @@ void Wheel::integrateRotation(float driveTorque, float dt) {
 }
 
 
-float Wheel::getTireVelocity() const {
+float Tire::getTireVelocity() const {
     return angularVel * radius;
 }
 

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "Wheel.h"
+#include "Tire.h"
 #include "TireDynamics.h"
 
 class Vehicle {

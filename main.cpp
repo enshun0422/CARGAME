@@ -48,7 +48,7 @@ int main() {
         TireDynamics& rearTire = myCar.tires[3]; // 觀察右後輪
 
         float vehicleSpeedKPH = myCar.getKPH();
-        float wheelSpeedKPH = rearTire.wheel.getTireVelocity() * 3.6f;
+        float wheelSpeedKPH = rearTire.tire.getTireVelocity() * 3.6f;
         float currentSlipRatio = rearTire.calculslipRatio(myCar.forwardVelocity);
 
         std::cout << std::fixed << std::setprecision(4)

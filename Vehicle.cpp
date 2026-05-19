@@ -13,21 +13,21 @@ void Vehicle::update(float driveTorque, float brakeForce, float dt) {
         float totalFx = 0.0f; // 用來收集四顆輪胎產生的總力 (前進推力或煞車阻力)
 
         // 假設這是一台後輪驅動車 (RWD)：引擎動力只分給左後(2)與右後(3)輪
-        float torquePerDriveWheel = driveTorque / 2.0f;
+        float torquePerDriveTire = driveTorque / 2.0f;
 
         // --- 階段一到階段三：個別更新四顆輪胎 ---
         for (int i = 0; i < 4; i++) {
 
             // 1. 分配駕駛輸入 (煞車四輪都有，油門只有後輪有)
-            float currentTorque = (i >= 2) ? torquePerDriveWheel : 0.0f;
-            tires[i].wheel.setBreakingForce(brakeForce);
+            float currentTorque = (i >= 2) ? torquePerDriveTire : 0.0f;
+            tires[i].tire.setBreakingForce(brakeForce);
 
-            // 2. 【閉環回饋關鍵】讀取這顆輪胎上一幀算出的摩擦力，傳給 Wheel 當作阻力
+            // 2. 【閉環回饋關鍵】讀取這顆輪胎上一幀算出的摩擦力，傳給 Tire 當作阻力
             float currentFriction = tires[i].getLongitudinalForce();
-            tires[i].wheel.setFriction(currentFriction);
+            tires[i].tire.setFriction(currentFriction);
 
-            // 3. 轉動積分：計算角加速度並更新輪速 (呼叫你寫的 Wheel::integrateRotation)
-            tires[i].wheel.integrateRotation(currentTorque, dt);
+            // 3. 轉動積分：計算角加速度並更新輪速 (呼叫你寫的 Tire::integrateRotation)
+            tires[i].tire.integrateRotation(currentTorque, dt);
 
             // 4. 計算滑移率：比對輪速與目前的「車速」(呼叫你寫的 TireDynamics::calculslipRatio)
             tires[i].calculslipRatio(this->forwardVelocity);
