@@ -22,12 +22,12 @@ private:
 public:
 	void setFriction(float friction);
 	void setBreakingForce(float breakingForce);
-	
+	float getRadius() const;
+	float getAngularVel() const;
 
 	float calculateAngularAcceleration(float driveTorque); // 根據驅動扭矩和時間步長更新角速度
 	void integrateRotation(float driveTorque, float dt); // 更新角速度和位置
 
 
 	float getTireVelocity() const ;// 輪速轉車速
-	
 };

@@ -15,22 +15,42 @@ class TireDynamics {
 		float slipRatio = 0.0f; // 打滑比率 Slip Ratio
 		float slipAngle = 0.0f; // 滑移角 Slip Angle
 
-		static constexpr float Default_B = 10.0f; // 剛性因子 Stiffness Factor (決定滑移率對摩擦力的敏感度)
-		static constexpr float Default_C = 1.5f; // 形狀因子 Shape Factor (決定抓地力曲線後段的陡峭程度)
-		static constexpr float Default_D = 1.0f; // 峰值因子 Peak Factor (決定最大摩擦力)
-		static constexpr float Default_E = 0.97; // 曲率因子 Curvature Factor (決定抓地力極限的容錯率)
+		// --- 縱向力 (Fx) Pacejka 參數 ---
+		static constexpr float Fx_B = 10.0f;
+		static constexpr float Fx_C = 1.65f;
+		static constexpr float Fx_E = 0.97f;
+		float Fx_mu_base = 1.45f; // 熱熔胎的縱向極限
+
+		// --- 側向力 (Fy) Pacejka 參數 ---
+		static constexpr float Fy_B = 12.0f; // 側向初始攀升通常更快 (Cornering Stiffness 高)
+		static constexpr float Fy_C = 1.35f; // 側向頂峰較平緩
+		static constexpr float Fy_E = -0.5f; // 注意：真實側向 E 值有時會是負數，以匹配真實衰減曲線
+		float Fy_mu_base = 1.40f; // 熱熔胎的側向極限
+		float camberAngle = 0.0f;           // 當前外傾角 (弧度)
+		float camberStiffness = 0.05f;      // 外傾剛性 (需要調校的常數)
+
 	public:
 		Tire tire;
 		void setLongitudinalForce(float fx);
 		void setLateralForce(float fy);
 		void setVerticalLoad(float load);//Fz
 
-		static float calculatePacejkaFx(float s, float Fz, float B, float C, float D, float E);
+
+		void setCamberAngle(float camber);  // 設定外傾角的函式
+		float getLongitudinalForce() const; // 縱向力 (摩擦力)
+		float getLateralForce() const; // 橫向力 (側向力)
+
+		float getAngularVel(Tire tire) const;
+
+		// --- 物理計算函式 ---
 		float calculslipRatio(float forwardVelocity);
+		float calculateSlipAngle(float carVx, float carVy, float yawRate, float rx, float ry, float steerAngle);
 
-		void updateTireForces();
+		// Pacejka 核心數學模型
+		float calculateDynamicD(float load, float base_mu);
+		static float calculatePacejkaForce(float s, float Fz, float B, float C, float D, float E);
+		
+		// 每幀更新狀態
 		void updateSlipState();
-
-		float getLongitudinalForce() const;
-
+		void updateTireForces();
 };

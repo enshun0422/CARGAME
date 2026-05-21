@@ -5,11 +5,12 @@ void Tire::setFriction(float friction) {
 	fabsf(friction) < 0.01f ? this->roadFriction = 0.0f : this->roadFriction = friction; // 避免過小的摩擦力導致反轉
 
 }
-
 void Tire::setBreakingForce(float breakingForce) {
 	fabsf(breakingForce) < 0.01f ? this->breakingForce = 0.0f : this->breakingForce = breakingForce; // 避免過小的制動力導致反轉
 }
 
+float Tire::getRadius() const { return radius; }
+float Tire::getAngularVel() const { return angularVel; }
 
 float Tire::calculateAngularAcceleration(float driveTorque) {
 	float frictionTorque = roadFriction * radius; // 摩擦力轉換為扭矩
@@ -21,7 +22,7 @@ float Tire::calculateAngularAcceleration(float driveTorque) {
 }
 
 void Tire::integrateRotation(float driveTorque, float dt) {
-    // 1. 先算出原本的角加速度與「預計」的新角速度
+    /*// 1. 先算出原本的角加速度與「預計」的新角速度
     float accel = calculateAngularAcceleration(driveTorque);
     float newAngularVel = angularVel + accel * dt;
 
@@ -40,7 +41,37 @@ void Tire::integrateRotation(float driveTorque, float dt) {
         newAngularVel = 0.0f; // 煞車最多只能煞到停，不能倒車
     }
 
-    // 更新真正受保護的角速度
+    // 更新真正受保護的角速度*/
+    
+
+    // 1. 地面摩擦阻力矩 (roadFriction 就是 Pacejka 算出來的 Fx)
+    // Pacejka 公式本身就已經具備完美的「正負號」來決定阻力方向，直接乘即可！
+    float frictionTorque = roadFriction * radius;
+
+    // 2. 煞車阻力矩 (機械煞車，永遠與目前的旋轉方向相反)
+    float brakeTorque = breakingForce * radius;
+    float actualBrakeTorque = 0.0f;
+    if (angularVel > 0.01f) {
+        actualBrakeTorque = brakeTorque;
+    }
+    else if (angularVel < -0.01f) {
+        actualBrakeTorque = -brakeTorque;
+    }
+
+    // 3. 計算淨扭矩 (引擎推力 - 地面反作用阻力 - 機械煞車阻力)
+    float netTorque = driveTorque - frictionTorque - actualBrakeTorque;
+
+    // 計算角加速度與新的角速度
+    float accel = netTorque / inertia;
+    float newAngularVel = angularVel + accel * dt;
+
+    // 4. 數值震盪保護機制
+    // 只有在「沒有踩油門」(純煞車或純滑行) 的情況下，才防止轉速跨越 0 導致反向震盪
+    if (driveTorque == 0.0f) {
+        if (angularVel > 0.0f && newAngularVel < 0.0f) newAngularVel = 0.0f;
+        if (angularVel < 0.0f && newAngularVel > 0.0f) newAngularVel = 0.0f;
+    }
+
     angularVel = newAngularVel;
 
     // 更新角位置與切線速度
