@@ -39,8 +39,8 @@ class TireDynamics {
 		void setCamberAngle(float camber);  // 設定外傾角的函式
 		float getLongitudinalForce() const; // 縱向力 (摩擦力)
 		float getLateralForce() const; // 橫向力 (側向力)
-
-		float getAngularVel(Tire tire) const;
+		float getSlipRatio() const;
+		float getAngularVel() const;
 
 		// --- 物理計算函式 ---
 		float calculslipRatio(float forwardVelocity);

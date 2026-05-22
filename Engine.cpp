@@ -1,4 +1,4 @@
-#include "Engine.h"
+﻿#include "Engine.h"
 
 // 建構子實作：設定預設的引擎參數與扭力曲線
 Engine::Engine() {
@@ -33,9 +33,11 @@ float Engine::getTorque(float currentRPM, float throttle) const {
         return torqueCurve.front().second * throttle;
     }
 
-    // 轉速高於紅線，斷油無扭力輸出
+    // 【修正物理】超過紅線不應該給 0，而是產生極大的機械阻力(引擎煞車)
     if (currentRPM > torqueCurve.back().first) {
-        return 0.0f;
+        // 隨著超轉越嚴重，負扭力越大 (模擬活塞壓縮阻力)
+        float overRevRatio = (currentRPM - torqueCurve.back().first) / 1000.0f;
+        return -300.0f - (200.0f * overRevRatio);
     }
 
     // 尋找對應的區間並進行線性插值 (Lerp)

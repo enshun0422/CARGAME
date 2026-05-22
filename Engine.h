@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 #include <utility>
 
 class Engine {
 private:
-    float idleRPM;
-    float maxRPM;
+    float idleRPM = 800.0f;
+    float maxRPM = 7500.0f;
     std::vector<std::pair<float, float>> torqueCurve;
 
 public:

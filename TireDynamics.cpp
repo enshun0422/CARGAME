@@ -7,9 +7,10 @@ void TireDynamics::setVerticalLoad(float load) {Fz = load;}
 void TireDynamics::setCamberAngle(float camber) { camberAngle = camber; }
 float TireDynamics::getLongitudinalForce() const {return Fx;}
 float TireDynamics::getLateralForce() const {return Fy;}
-float TireDynamics::getAngularVel(Tire tire) const {
-	float angularVel = tire.getAngularVel();
-    return angularVel;
+float TireDynamics::getSlipRatio() const { return slipRatio; }
+float TireDynamics::getAngularVel() const {
+	
+    return this->tire.getAngularVel();
 }
 
 // ---計算狀態---
@@ -68,7 +69,7 @@ void TireDynamics::updateSlipState() {
 	float camberThrust = Fz_val * this->camberStiffness * this->camberAngle;
 
 	// 4. 將滑移力與外傾推力合併，作為「理論無限制側向力」
-	this->Fy = base_Fy + camberThrust;
+	this->Fy = -(base_Fy + camberThrust);
 
 	// 5. 進行摩擦橢圓截斷
 	updateTireForces();

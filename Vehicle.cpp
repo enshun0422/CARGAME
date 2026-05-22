@@ -23,38 +23,57 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         // 1. 動力傳遞計算 (Drivetrain)
         // ==========================================
         float currentGearRatio = gearbox.getCurrentRatio();
-        float currentRadius = tires[0].tire.getRadius();
 
-        // 真實由輪速反推的基礎引擎轉速
-        float wheelRPM = (this->forwardVelocity / (2.0f * PI * currentRadius)) * 60.0f;
-        float baseEngineRPM = std::abs(wheelRPM * currentGearRatio * gearbox.getFinalDrive());
+        // 【修正 1：引擎必須與「驅動輪」的轉速綁定，而不是車速！】
+        // RWD 後驅車，我們讀取真實後輪 (tires[2]) 的旋轉角速度 (rad/s)
+        float drivenWheelRad = std::abs(tires[2].tire.getAngularVel());
+        float wheelRPM = drivenWheelRad * (60.0f / TWO_PI);
+
+        // 【修正 2：齒比加上絕對值，確保打倒檔時引擎轉速依然是正的】
+        float baseEngineRPM = wheelRPM * std::abs(currentGearRatio) * gearbox.getFinalDrive();
 
         float engineRPM = baseEngineRPM;
 
-        // 【新增：起步彈射與離合器滑差邏輯】
-        // 如果踩油門，且車速低於 60 KPH，允許引擎轉速拉高，模擬離合器半接合
-        if (throttle > 0.1f && this->forwardVelocity < 16.6f) { // 16.6 m/s 約為 60 KPH
-            // 讓引擎轉速拉升到 4500 轉 (M4 GT3 扭力平原區間)
+        // 起步彈射與離合器滑差邏輯 (保持原樣，這段沒問題)
+        if (throttle > 0.1f && std::abs(this->forwardVelocity) < 16.6f) { // 16.6 m/s 約為 60 KPH
             float targetLaunchRPM = 4500.0f * throttle;
             if (baseEngineRPM < targetLaunchRPM) {
                 engineRPM = targetLaunchRPM;
             }
         }
 
-        // 限制在怠速與紅線之間
-        engineRPM = std::clamp(engineRPM, engine.getIdleRPM(), engine.getMaxRPM());
+        // 【修正 3：解除紅線封印！】
+        // 只限制最低怠速防熄火，絕對不能用 clamp 限制最高轉速。
+        // 必須讓 engineRPM 有機會突破 7500，才能觸發 Engine 裡的負扭力 (斷油保護)！
+        engineRPM = std::max(engineRPM, engine.getIdleRPM());
 
-        // 取得引擎扭力並計算傳到驅動軸的總扭力
-        float engineTorque = engine.getTorque(engineRPM, throttle);
+        // 【新增：TCS 循跡防滑系統介入】
+        float actualThrottle = throttle;
+        if (TCSActive) {
+            // 如果監測到後輪 (驅動輪) 的滑移率飆升超過 10% (0.1f)
+            if (tires[2].getSlipRatio() > 0.1f || tires[3].getSlipRatio() > 0.1f) {
+                // 電腦強制切斷油門，只保留 5% 的動力讓輪胎恢復側向抓地力
+                actualThrottle = 0.05f;
+            }
+        }
+
+        // 使用被 TCS 修正過的油門來計算扭力
+        float engineTorque = engine.getTorque(engineRPM, actualThrottle);
         float driveTorque = engineTorque * currentGearRatio * gearbox.getFinalDrive() * gearbox.getEfficiency();
+
 
         // 假設 RWD (後輪驅動)
         float torquePerDriveTire = driveTorque / 2.0f;
 
         // 【新增：輪胎最高轉速限制 (Rev Limiter)】
         // 取得引擎最高轉速對應的最高輪速，防止輪胎無限空轉爆炸
-        float maxWheelRPM = engine.getMaxRPM() / (currentGearRatio * gearbox.getFinalDrive());
+        float maxWheelRPM = 100000.0f;
+        if (std::abs(currentGearRatio) > 0.01f) {
+            maxWheelRPM = engine.getMaxRPM() / std::abs(currentGearRatio * gearbox.getFinalDrive());
+        }
         float maxTireAngularVel = maxWheelRPM * (2.0f * PI / 60.0f); // 轉為 rad/s
+
+        
 
         // ==========================================
         // 2. 空氣動力與防傾桿計算
@@ -96,12 +115,24 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
             // --- B. 輪胎旋轉積分與打滑狀態 ---
             float currentTorque = (i >= 2) ? torquePerDriveTire : 0.0f;
 
-            // 【新增：引擎紅線保護】如果輪胎轉速超過引擎極限，切斷扭力輸出
-            if (tires[i].tire.getAngularVel() > maxTireAngularVel) {
+            // 引擎紅線保護
+            if (std::abs(tires[i].tire.getAngularVel()) > maxTireAngularVel) {
                 currentTorque = 0.0f;
             }
 
-            tires[i].tire.setBreakingForce(brakeForce);
+            // 【修正：重構 ABS 防鎖死邏輯】
+            float appliedBrakeForce = brakeForce;
+
+            if (ABSActive && brakeForce > 0.0f) {
+                // optimalBrakeSlip 之前設定為 -0.15
+                if (tires[i].getSlipRatio() < optimalBrakeSlip) {
+                    // 當滑移率低於極限，必須「徹底放開」煞車，讓輪胎靠地面摩擦力重新轉起來！
+                    // 不要只乘以 0.5，直接設為 0 (或極小值) 才能在下一個 subStep 瞬間解除鎖死
+                    appliedBrakeForce = 0.0f;
+                }
+            }
+            // 必須傳遞修改後的 appliedBrakeForce，而不是原本的 brakeForce
+            tires[i].tire.setBreakingForce(appliedBrakeForce);
 
             // 阻力設定
             float currentFriction = tires[i].getLongitudinalForce();
@@ -156,9 +187,14 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         float accel_X = total_Fx_car / this->totalMass;
         float accel_Y = total_Fy_car / this->totalMass;
 
-        // 【關鍵修復】必須使用 subDt 積分速度
-        this->forwardVelocity += accel_X * subDt;
-        this->lateralVelocity += accel_Y * subDt;
+        // 加入旋轉座標系的離心力/科氏力補償
+        // 公式：v_dot = a_y - (u * r)
+        // 公式：u_dot = a_x + (v * r)
+        float delta_Vx = accel_X + (this->lateralVelocity * this->yawRate);
+        float delta_Vy = accel_Y - (this->forwardVelocity * this->yawRate);
+
+        this->forwardVelocity += delta_Vx * subDt;
+        this->lateralVelocity += delta_Vy * subDt;
 
         // 數值穩定保護
         if (this->forwardVelocity < 0.01f && driveTorque == 0.0f && accel_X <= 0.0f) {

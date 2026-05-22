@@ -40,87 +40,68 @@ int main() {
     int totalFrames = 39.0f / dt;
 
     for (int frame = 0; frame <= totalFrames; frame++) {
+        // ==========================================
+        // 1. 駕駛行為模擬 (只負責踩踏板與轉方向盤)
+        // ==========================================
         float throttle = 0.0f;
         float brakeForce = 0.0f;
         float steerInput = 0.0f;
         std::string stageStatus = "";
 
-        // 【測試情境排程：0 ~ 39 秒】
         if (totalTime < 19.0f) {
-            // 0~19秒：直線全力加速
-            throttle = 1.0f;
-            brakeForce = 0.0f;
-            steerInput = 0.0f;
-            stageStatus = "[ACCEL]";
-
-            // 自動升檔邏輯
-            if (myCar.getKPH() > 80.0f && myCar.gearbox.getCurrentGear() == 2) myCar.gearbox.shiftUp();
-            if (myCar.getKPH() > 130.0f && myCar.gearbox.getCurrentGear() == 3) myCar.gearbox.shiftUp();
-            if (myCar.getKPH() > 180.0f && myCar.gearbox.getCurrentGear() == 4) myCar.gearbox.shiftUp();
-            if (myCar.getKPH() > 230.0f && myCar.gearbox.getCurrentGear() == 5) myCar.gearbox.shiftUp();
+            throttle = 1.0f; stageStatus = "[ACCEL]";
         }
         else if (totalTime < 21.0f) {
-            // 19~21秒：直線重煞車
-            throttle = 0.0f;
-            brakeForce = 15000.0f;
-            steerInput = 0.0f;
-            stageStatus = "[BRAKE]";
-
-            // 自動退檔邏輯
-            if (myCar.getKPH() < 200.0f && myCar.gearbox.getCurrentGear() == 6) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 150.0f && myCar.gearbox.getCurrentGear() == 5) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 100.0f && myCar.gearbox.getCurrentGear() == 4) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 60.0f && myCar.gearbox.getCurrentGear() == 3) myCar.gearbox.shiftDown();
+            brakeForce = 15000.0f; stageStatus = "[BRAKE]";
         }
         else if (totalTime < 22.0f) {
-            // 21~22秒：左轉
             throttle = 0.2f;
-            brakeForce = 0.0f;
-            steerInput = -0.35f;
+            steerInput = 0.05f;  // 【修正】從 0.35 改為 0.05 (約 3 度)
             stageStatus = "[TURN_L]";
         }
         else if (totalTime < 23.0f) {
-            // 22~23秒：右轉
             throttle = 0.2f;
-            brakeForce = 0.0f;
-            steerInput = 0.35f;
+            steerInput = -0.05f; // 【修正】從 -0.35 改為 -0.05 (約 3 度)
             stageStatus = "[TURN_R]";
         }
         else if (totalTime < 29.0f) {
-            // 23~29秒：出彎再度加速
-            throttle = 1.0f;
-            brakeForce = 0.0f;
-            steerInput = 0.0f;
-            stageStatus = "[ACCEL]";
-            if (myCar.getKPH() > 80.0f && myCar.gearbox.getCurrentGear() == 2) myCar.gearbox.shiftUp();
-            if (myCar.getKPH() > 130.0f && myCar.gearbox.getCurrentGear() == 3) myCar.gearbox.shiftUp();
-            if (myCar.getKPH() > 180.0f && myCar.gearbox.getCurrentGear() == 4) myCar.gearbox.shiftUp();
-            if (myCar.getKPH() > 230.0f && myCar.gearbox.getCurrentGear() == 5) myCar.gearbox.shiftUp();
+            stageStatus = "[COAST]"; // 無油門無煞車滑行
         }
         else if (totalTime < 34.0f) {
-            // 29~34秒：無油門無煞車滑行
-            throttle = 0.0f;
-            brakeForce = 0.0f;
-            steerInput = 0.0f;
-            stageStatus = "[COAST]";
-            if (myCar.getKPH() < 200.0f && myCar.gearbox.getCurrentGear() == 6) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 150.0f && myCar.gearbox.getCurrentGear() == 5) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 100.0f && myCar.gearbox.getCurrentGear() == 4) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 60.0f && myCar.gearbox.getCurrentGear() == 3) myCar.gearbox.shiftDown();
+            throttle = 1.0f; stageStatus = "[ACCEL]";
         }
         else if (totalTime <= 39.0f) {
-            // 34~39秒：最終重煞車至停止
-            throttle = 0.0f;
-            brakeForce = 15000.0f;
-            steerInput = 0.0f;
-            stageStatus = "[BRAKE]";
-            if (myCar.getKPH() < 200.0f && myCar.gearbox.getCurrentGear() == 6) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 150.0f && myCar.gearbox.getCurrentGear() == 5) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 100.0f && myCar.gearbox.getCurrentGear() == 4) myCar.gearbox.shiftDown();
-            if (myCar.getKPH() < 60.0f && myCar.gearbox.getCurrentGear() == 3) myCar.gearbox.shiftDown();
+            brakeForce = 15000.0f; stageStatus = "[BRAKE]";
         }
 
-        // 傳遞控制訊號並推進物理幀
+        // ==========================================
+        // 2. 變速箱電腦 (TCU) 獨立邏輯
+        // ==========================================
+        int currentGearIdx = myCar.gearbox.getCurrentGear();
+        float currentSpeed = myCar.getKPH();
+
+        // [升檔邏輯]：只要有踩油門，且轉速/車速達到門檻就升檔
+        if (throttle > 0.1f) {
+            if (currentSpeed > 270.0f && currentGearIdx == 6) myCar.gearbox.shiftUp(); // 5升6
+            else if (currentSpeed > 230.0f && currentGearIdx == 5) myCar.gearbox.shiftUp(); // 4升5
+            else if (currentSpeed > 180.0f && currentGearIdx == 4) myCar.gearbox.shiftUp(); // 3升4
+            else if (currentSpeed > 130.0f && currentGearIdx == 3) myCar.gearbox.shiftUp(); // 2升3
+            else if (currentSpeed > 80.0f && currentGearIdx == 2) myCar.gearbox.shiftUp(); // 1升2
+        }
+
+        // [降檔邏輯]：只要沒踩油門（煞車或滑行），積極維持高轉速降檔
+        // 注意：這裡門檻大幅提高，模擬 GT3 賽車的激進退檔
+        if (throttle <= 0.1f) {
+            if (currentSpeed < 260.0f && currentGearIdx == 7) myCar.gearbox.shiftDown(); // 6退5
+            else if (currentSpeed < 220.0f && currentGearIdx == 6) myCar.gearbox.shiftDown(); // 5退4
+            else if (currentSpeed < 170.0f && currentGearIdx == 5) myCar.gearbox.shiftDown(); // 4退3
+            else if (currentSpeed < 120.0f && currentGearIdx == 4) myCar.gearbox.shiftDown(); // 3退2
+            else if (currentSpeed < 70.0f && currentGearIdx == 3) myCar.gearbox.shiftDown(); // 2退1
+        }
+
+        // ==========================================
+        // 3. 傳遞物理訊號與推進物理幀
+        // ==========================================
         myCar.setSteeringAngle(steerInput);
         myCar.update(throttle, brakeForce, dt);
 
@@ -169,33 +150,25 @@ int main() {
 
             // 5. 計算顯示用之引擎 RPM (重寫離合器接合邏輯)
             float currentGearRatio = myCar.gearbox.getCurrentRatio();
-            float wheelRPM = (myCar.getForwardVelocity() / (2.0f * PI * myCar.tires[0].tire.getRadius())) * 60.0f;
-            float baseEngineRPM = std::abs(wheelRPM * currentGearRatio * myCar.gearbox.getFinalDrive());
+
+            // 【儀表板同步修正】：一樣從後輪抓取真實輪速
+            float drivenWheelRad = std::abs(myCar.tires[2].tire.getAngularVel());
+            float wheelRPM = drivenWheelRad * (60.0f / TWO_PI);
+            float baseEngineRPM = wheelRPM * std::abs(currentGearRatio) * myCar.gearbox.getFinalDrive();
 
             float engineRPM = baseEngineRPM;
 
-            // 離合器模擬：在低速起步階段允許轉速攀升
-            if (myCar.getKPH() < 60.0f && throttle > 0.1f) {
-                // 1. 計算全油門時的目標彈射轉速 (約斷油轉速的 60%)
+            // 離合器模擬 (維持原樣)
+            if (std::abs(myCar.getKPH()) < 60.0f && throttle > 0.1f) {
                 float launchRPM = myCar.engine.getMaxRPM() * 0.6f;
-
-                // 2. 根據當前油門深度，決定實際的拉轉目標
                 float targetLaunchRPM = myCar.engine.getIdleRPM() + throttle * (launchRPM - myCar.engine.getIdleRPM());
-
-                // 3. 計算離合器接合比例 (Slip Ratio)
-                // 假設車速達到 60 KPH 時離合器完全接合 (比例為 0)
-                // 車速為 0 時，離合器滑動最嚴重 (比例為 1)
-                float clutchSlip = 1.0f - (myCar.getKPH() / 60.0f);
+                float clutchSlip = 1.0f - (std::abs(myCar.getKPH()) / 60.0f);
                 clutchSlip = std::clamp(clutchSlip, 0.0f, 1.0f);
-
-                // 4. 將基礎轉速與拉轉轉速進行混合 (Interpolation)
-                // 當 clutchSlip 為 1 (靜止) 時，引擎完全聽油門的 (targetLaunchRPM)
-                // 當 clutchSlip 為 0 (超過 60KPH) 時，引擎完全綁定輪速 (baseEngineRPM)
                 engineRPM = (targetLaunchRPM * clutchSlip) + (baseEngineRPM * (1.0f - clutchSlip));
             }
 
-            // 確保轉速不會低於怠速或超過紅線
-            engineRPM = std::clamp(engineRPM, myCar.engine.getIdleRPM(), myCar.engine.getMaxRPM());
+            // 【儀表板同步修正】：解除 clamp，讓你親眼在 Console 看到轉速撞到紅線 7600 轉彈跳的快感！
+            engineRPM = std::max(engineRPM, myCar.engine.getIdleRPM());
 
             std::cout << std::setw(6) << frame << " | "
                 << std::setw(8) << stageStatus << " | "

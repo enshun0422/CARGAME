@@ -14,10 +14,11 @@ constexpr float TWO_PI = 6.2831853071f;
 
 class Vehicle {
 private:
-    float totalMass = 1300.0f; // 噸
     float yawRate = 0.0f; // 車體旋轉角速度 (rad/s)
 	float lateralVelocity = 0.0f; // 車體側向滑動速度 (m/s)
 	float steeringAngle = 0.0f; // 前輪轉向角 (rad)
+
+    float totalMass = 1300.0f; // 噸
     float cgToFrontAxle = 1.458f;  // 重心到前軸距離 (rx)
     float cgToRearAxle = -1.459f;  // 重心到後軸距離 (rx)
     float halfTrackWidth = 0.96f; // 左右輪距的一半 (ry)
@@ -29,7 +30,13 @@ private:
     float antiRollBarStiffnessRear = 60000.0f;  // 後防傾桿
 
 	float currentSuspensionLength = 0.3f; // 當前懸吊長度 (m)，這裡假設四個輪子一樣
+
     float forwardVelocity = 0.0f; // 前進速度 (m/s)
+
+	// 電子輔助系統狀態
+	bool ABSActive = true; // 防鎖死煞車系統 (ABS) 是否啟動
+	bool TCSActive = true; // 循跡控制系統 (TCS) 是否啟動
+    float optimalBrakeSlip = -0.15f;
 
     // --- 世界狀態變數 ---
     float worldX = 0.0f;       // 世界座標 X (公尺)
@@ -63,6 +70,5 @@ public:
     
 	void update(float throttle, float brakeForce, float dt);
     float getKPH();
-
 
 };
