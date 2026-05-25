@@ -1,9 +1,9 @@
-#pragma once
-#include <vector>
+﻿#pragma once
+#include <array>
 
 class Gearbox {
 private:
-    std::vector<float> gearRatios;
+    std::array<float, 8> gearRatios{};
     float finalDrive;
     float efficiency;
     int currentGear; // 內部狀態：0=倒檔, 1=空檔, 2=一檔...

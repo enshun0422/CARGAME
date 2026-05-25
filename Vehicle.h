@@ -31,7 +31,14 @@ private:
 
 	float currentSuspensionLength = 0.3f; // 當前懸吊長度 (m)，這裡假設四個輪子一樣
 
+    float currentPitch = 0.0f; // 俯仰角 (煞車為正，加速為負)
+    float currentRoll = 0.0f;  // 側傾角 (左轉為正，右轉為負)
+    float cgHeight = 0.45f;    // 假設重心高度 45 公分
+
     float forwardVelocity = 0.0f; // 前進速度 (m/s)
+
+    float lastSuspensionLoad[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float lastSuspensionLength[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
 
 	// 電子輔助系統狀態
 	bool ABSActive = true; // 防鎖死煞車系統 (ABS) 是否啟動
@@ -67,6 +74,8 @@ public:
     float getWorldX() const;
     float getWorldY() const;
 	float getHeadingAngle() const;
+    float getSuspensionLoad(int index) const;
+    float getSuspensionLength(int index) const;
     
 	void update(float throttle, float brakeForce, float dt);
     float getKPH();

@@ -1,12 +1,12 @@
 ﻿#pragma once
-#include <vector>
+#include <array>
 #include <utility>
 
 class Engine {
 private:
     float idleRPM = 800.0f;
     float maxRPM = 7500.0f;
-    std::vector<std::pair<float, float>> torqueCurve;
+    std::array<std::pair<float, float>, 7> torqueCurve{};
 
 public:
     // 建構子：負責初始化引擎參數

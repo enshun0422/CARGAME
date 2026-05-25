@@ -6,7 +6,7 @@ Engine::Engine() {
     this->maxRPM = 7500.0f;
 
     // 扭力曲線對照表 (RPM, Torque in Nm)
-    this->torqueCurve = {
+    this->torqueCurve = { {
         {1000, 250.0f},
         {2500, 500.0f},
         {4000, 680.0f},
@@ -14,7 +14,7 @@ Engine::Engine() {
         {6000, 650.0f},
         {7000, 550.0f},
         {7500, 450.0f}
-    };
+    } };
 }
 
 // Getters 實作

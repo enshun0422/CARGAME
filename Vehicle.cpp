@@ -11,11 +11,24 @@ float Vehicle::getForwardVelocity() const { return forwardVelocity; }
 float Vehicle::getWorldX() const { return worldX; }
 float Vehicle::getWorldY() const { return worldY; }
 float Vehicle::getHeadingAngle() const { return headingAngle; }
+float Vehicle::getSuspensionLoad(int index) const {
+    if (index < 0 || index >= 4) return 0.0f;
+    return lastSuspensionLoad[index];
+}
+float Vehicle::getSuspensionLength(int index) const {
+    if (index < 0 || index >= 4) return 0.0f;
+    return lastSuspensionLength[index];
+}
 
 void Vehicle::update(float throttle, float brakeForce, float dt) {
     throttle = (throttle > 0.02f) ? throttle : 0.0f;
     int subSteps = 10;
     float subDt = dt / subSteps;
+
+    // 1. 進入迴圈時，第 2 步的懸吊可以合法讀取到「上一個子步」留下來的加速度。
+    // 2. 到了第 4 步更新這兩個值後，它們會存活並帶入下一次的 step 迴圈中。
+    float accel_X = 0.0f;
+    float accel_Y = 0.0f;
 
     // 將原本的物理邏輯包進子迴圈
     for (int step = 0; step < subSteps; step++) {
@@ -53,7 +66,7 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
             // 如果監測到後輪 (驅動輪) 的滑移率飆升超過 10% (0.1f)
             if (tires[2].getSlipRatio() > 0.1f || tires[3].getSlipRatio() > 0.1f) {
                 // 電腦強制切斷油門，只保留 5% 的動力讓輪胎恢復側向抓地力
-                actualThrottle = 0.05f;
+                actualThrottle = std::min(throttle, 0.05f);
             }
         }
 
@@ -78,14 +91,37 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         // ==========================================
         // 2. 空氣動力與防傾桿計算
         // ==========================================
+        // 計算加速度 (Local Frame)
+
         float currentDrag = aero.calculateDragForce(this->forwardVelocity);
         float currentFrontDF = aero.calculateFrontDownforce(this->forwardVelocity);
         float currentRearDF = aero.calculateRearDownforce(this->forwardVelocity);
 
-        // 模擬的 Raycast 壓縮量，這裡用你標頭檔宣告的預設變數
-        float compression[4] = { 0.05f, 0.05f, 0.05f, 0.05f };
-        float frontAntiRollForce = (compression[0] - compression[1]) * antiRollBarStiffnessFront;
-        float rearAntiRollForce = (compression[2] - compression[3]) * antiRollBarStiffnessRear;
+        // 【新增】利用上一幀的加速度，計算重心轉移導致的車身姿態
+        // 為了數值穩定，我們假設懸吊有一個極短的反應時間 (這裡簡化處理)
+        float pitchAccel = accel_X * cgHeight; // 煞車時 accel_X 為負，這裡的 Pitch 設定為簡化比例
+        float rollAccel = accel_Y * cgHeight;  // 轉彎時的側向力矩
+
+        // 簡化的姿態更新 (帶有阻尼衰減，避免無窮震盪)
+        this->currentPitch = this->currentPitch * 0.8f - (pitchAccel * 0.0001f);
+        this->currentRoll = this->currentRoll * 0.8f + (rollAccel * 0.0001f);
+
+        // 根據車身姿態 (Pitch/Roll) 計算四個避震器的「真實壓縮量」
+        // suspension[0]: 左前, [1]: 右前, [2]: 左後, [3]: 右後
+        float baseLength = 0.2f; // 預設靜態懸吊長度
+        float currentLengths[4];
+
+        // 幾何投影：透過車身傾斜角度，算出四個角落的懸吊被壓了多少
+        // Vehicle.cpp 的第 2 步尾端：
+        // 幾何投影算出長度後，強制限制在 0.05m (5公分) 到 0.35m (35公分) 之間，絕對不准變成負數！
+        currentLengths[0] = std::clamp(baseLength - (this->currentPitch * cgToFrontAxle) + (this->currentRoll * halfTrackWidth), 0.05f, 0.35f);
+        currentLengths[1] = std::clamp(baseLength - (this->currentPitch * cgToFrontAxle) - (this->currentRoll * halfTrackWidth), 0.05f, 0.35f);
+        currentLengths[2] = std::clamp(baseLength + (this->currentPitch * std::abs(cgToRearAxle)) + (this->currentRoll * halfTrackWidth), 0.05f, 0.35f);
+        currentLengths[3] = std::clamp(baseLength + (this->currentPitch * std::abs(cgToRearAxle)) - (this->currentRoll * halfTrackWidth), 0.05f, 0.35f);
+
+        // 計算真實的防傾桿力量 (根據左右避震器的長度差)
+        float frontAntiRollForce = (currentLengths[0] - currentLengths[1]) * antiRollBarStiffnessFront;
+        float rearAntiRollForce = (currentLengths[2] - currentLengths[3]) * antiRollBarStiffnessRear;
 
         // 宣告車體總受力變數 (修復未定義錯誤)
         float total_Fx_car = 0.0f;
@@ -97,7 +133,7 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         for (int i = 0; i < 4; i++) {
 
             // -- A. 計算正向力 Fz --
-            float staticWeight = (this->totalMass * 9.81f) / 4.0f;
+            float suspensionForce = suspensions[i].calculateForce(currentLengths[i], dt);
             float aeroDownforce = (i < 2) ? currentFrontDF / 2.0f : currentRearDF / 2.0f;
 
             float arbForce = 0.0f;
@@ -107,57 +143,48 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
             if (i == 3) arbForce = -rearAntiRollForce;       // 右後
 
             // 計算這顆輪胎最終的動態 Fz (為了簡化，這裡暫時將靜態重量和 ARB 力結合)
-            float final_Fz = staticWeight + aeroDownforce + arbForce;
-            // 確保輪胎不會有負的載重 (輪胎離地)
-            final_Fz = std::max(0.0f, final_Fz);
+            float final_Fz = std::max(0.0f, suspensionForce + aeroDownforce + arbForce);
+            lastSuspensionLength[i] = currentLengths[i];
+            lastSuspensionLoad[i] = final_Fz;
             tires[i].setVerticalLoad(final_Fz);
 
-            // --- B. 輪胎旋轉積分與打滑狀態 ---
-            float currentTorque = (i >= 2) ? torquePerDriveTire : 0.0f;
+            // -- B. 觀察現狀：計算 Slip Ratio 與 Slip Angle --
+            float currentSteer = (i < 2) ? steeringAngle : 0.0f;
 
-            // 引擎紅線保護
+            // 根據當前的車速與輪速，計算滑移狀態
+            tires[i].calculslipRatio(this->forwardVelocity);
+            tires[i].calculateSlipAngle(this->forwardVelocity, this->lateralVelocity, this->yawRate, tirePos_X[i], tirePos_Y[i], currentSteer);
+            tires[i].setCamberAngle(0.0f);
+
+            // -- C. 產生作用力：Pacejka 魔術公式 --
+            // 根據剛剛算出的 Slip，產生這一幀真正的縱向力與側向力
+            tires[i].updateSlipState();
+
+            // -- D. 準備積分：設定輪胎的受力邊界條件 --
+            // 1. 設定輪胎遭遇的地面摩擦阻力
+            float currentFriction = tires[i].getLongitudinalForce();
+            tires[i].tire.setFriction(currentFriction);
+
+            // 2. 設定引擎傳來的驅動扭矩 (附帶紅線保護)
+            float currentTorque = (i >= 2) ? torquePerDriveTire : 0.0f;
             if (std::abs(tires[i].tire.getAngularVel()) > maxTireAngularVel) {
                 currentTorque = 0.0f;
             }
 
-            // 【修正：重構 ABS 防鎖死邏輯】
+            // 3. 設定煞車卡鉗傳來的制動力 (附帶 ABS 邏輯)
             float appliedBrakeForce = brakeForce;
-
             if (ABSActive && brakeForce > 0.0f) {
-                // optimalBrakeSlip 之前設定為 -0.15
                 if (tires[i].getSlipRatio() < optimalBrakeSlip) {
-                    // 當滑移率低於極限，必須「徹底放開」煞車，讓輪胎靠地面摩擦力重新轉起來！
-                    // 不要只乘以 0.5，直接設為 0 (或極小值) 才能在下一個 subStep 瞬間解除鎖死
-                    appliedBrakeForce = 0.0f;
+                    appliedBrakeForce = 0.0f; // 釋放煞車避免鎖死
                 }
             }
-            // 必須傳遞修改後的 appliedBrakeForce，而不是原本的 brakeForce
             tires[i].tire.setBreakingForce(appliedBrakeForce);
 
-            // 阻力設定
-            float currentFriction = tires[i].getLongitudinalForce();
-            tires[i].tire.setFriction(currentFriction);
-
-            // 【關鍵修復】必須使用 subDt 積分轉速
+            // -- E. 推進時間：積分輪胎旋轉速度 --
+            // 力都算完了，最後才來積分速度！
             tires[i].tire.integrateRotation(currentTorque, subDt);
 
-            // --- C. 計算 Pacejka 與側向力 ---
-            // 只有前輪有轉向角
-            float currentSteer = (i < 2) ? steeringAngle : 0.0f;
-
-            // 更新滑移率
-            tires[i].calculslipRatio(this->forwardVelocity);
-
-            // 【關鍵修復】更新滑移角 (前一版本完全遺漏)
-            tires[i].calculateSlipAngle(this->forwardVelocity, this->lateralVelocity, this->yawRate, tirePos_X[i], tirePos_Y[i], currentSteer);
-
-            // 假設 Camber 為 0 (若後續接上 Suspension 可再修改)
-            tires[i].setCamberAngle(0.0f);
-
-            // 執行魔術公式與摩擦橢圓截斷
-            tires[i].updateSlipState();
-
-            // --- D. 座標投影與總力加總 ---
+            // -- F. 座標投影與總力加總 --
             float Fx_tire = tires[i].getLongitudinalForce();
             float Fy_tire = tires[i].getLateralForce();
 
@@ -184,8 +211,8 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         total_Fx_car -= currentDrag;
 
         // 計算加速度
-        float accel_X = total_Fx_car / this->totalMass;
-        float accel_Y = total_Fy_car / this->totalMass;
+        accel_X = total_Fx_car / this->totalMass;
+        accel_Y = total_Fy_car / this->totalMass;
 
         // 加入旋轉座標系的離心力/科氏力補償
         // 公式：v_dot = a_y - (u * r)
@@ -197,6 +224,9 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         this->lateralVelocity += delta_Vy * subDt;
 
         // 數值穩定保護
+        if (brakeForce > 0.0f && std::abs(this->forwardVelocity) < 0.2f && std::abs(tires[2].tire.getAngularVel()) < 0.5f) {
+            this->forwardVelocity = 0.0f;
+        }
         if (this->forwardVelocity < 0.01f && driveTorque == 0.0f && accel_X <= 0.0f) {
             this->forwardVelocity = 0.0f;
         }

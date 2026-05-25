@@ -7,7 +7,7 @@
 class Tire {
 private:
     float radius = 0.33f;    // 18吋胎半徑約 0.33公尺
-	float inertia = 1.2f;    // 輪胎轉動慣量 (kg.m^2)
+	float inertia = 3.0f;    // 輪胎轉動慣量 (kg.m^2)
 	float dampingCoeff = 0.1f; // 阻尼係數
 
     float angularVel = 0.0f; // 角速度 (rad/s)

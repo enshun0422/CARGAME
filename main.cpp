@@ -29,15 +29,15 @@ int main() {
         << std::setw(15) << "tire_vel(KPH)" << " | "
         << std::setw(10) << "slip_ratio" << " | "
         << std::setw(11) << "slip_angle" << " | "
-        << std::setw(13) << "suspension FL" << " | "
-        << std::setw(13) << "suspension FR" << " | "
-        << std::setw(13) << "suspensionRL" << " | "
-        << std::setw(13) << "suspensionRR" << " | "
+        << std::setw(13) << "susp FL(m)" << " | "
+        << std::setw(13) << "susp FR(m)" << " | "
+        << std::setw(13) << "susp RL(m)" << " | "
+        << std::setw(13) << "susp RR(m)" << " | "
         << std::setw(11) << "steer_angle" << " | "
         << std::setw(14) << "World_Pos(X,Y)" << "\n";
     std::cout << "--------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
 
-    int totalFrames = 39.0f / dt;
+    int totalFrames = static_cast<int>(39.0f / dt);
 
     for (int frame = 0; frame <= totalFrames; frame++) {
         // ==========================================
@@ -121,32 +121,10 @@ int main() {
             float wheelVy = myCar.getLateralVelocity() + myCar.getYawRate() * rx_front;
             float slipAngleDeg = (std::atan2(wheelVy, refSpeed) - steerInput) * (180.0f / PI);
 
-            // 計算避震器正向力 (模擬防傾桿行程差異)
-            float staticW = (myCar.getTotalMass() * 9.81f) / 4.0f;
-            float currentFrontDF = myCar.aero.calculateFrontDownforce(myCar.getForwardVelocity());
-            float currentRearDF = myCar.aero.calculateRearDownforce(myCar.getForwardVelocity());
-
-            float compression_mock[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-            if (steerInput < 0.0f) { // 左轉：車身向右傾 (外側壓，內側伸)
-                compression_mock[0] = 0.02f;
-                compression_mock[1] = -0.02f;
-                compression_mock[2] = 0.02f;
-                compression_mock[3] = -0.02f;
-            }
-            else if (steerInput > 0.0f) { // 右轉：車身向左傾
-                compression_mock[0] = -0.02f;
-                compression_mock[1] = 0.02f;
-                compression_mock[2] = -0.02f;
-                compression_mock[3] = 0.02f;
-            }
-
-            float frontARB = (compression_mock[0] - compression_mock[1]) * myCar.getAntiRollBarStiffnessFront();
-            float rearARB = (compression_mock[2] - compression_mock[3]) * myCar.getAntiRollBarStiffnessRear();
-
-            float suspFL = std::max(0.0f, staticW + (currentFrontDF / 2.0f) + frontARB);
-            float suspFR = std::max(0.0f, staticW + (currentFrontDF / 2.0f) - frontARB);
-            float suspRL = std::max(0.0f, staticW + (currentRearDF / 2.0f) + rearARB);
-            float suspRR = std::max(0.0f, staticW + (currentRearDF / 2.0f) - rearARB);
+            float suspFL = myCar.getSuspensionLength(0);
+            float suspFR = myCar.getSuspensionLength(1);
+            float suspRL = myCar.getSuspensionLength(2);
+            float suspRR = myCar.getSuspensionLength(3);
 
             // 5. 計算顯示用之引擎 RPM (重寫離合器接合邏輯)
             float currentGearRatio = myCar.gearbox.getCurrentRatio();
@@ -179,10 +157,10 @@ int main() {
                 << std::setw(15) << tireKPH << " | "
                 << std::setw(10) << std::setprecision(4) << slipRatioVal << " | "
                 << std::setw(11) << std::setprecision(2) << slipAngleDeg << " | "
-                << std::setw(13) << std::setprecision(0) << suspFL << " | "
-                << std::setw(13) << std::setprecision(0) << suspFR << " | "
-                << std::setw(13) << std::setprecision(0) << suspRL << " | "
-                << std::setw(13) << std::setprecision(0) << suspRR << " | "
+                << std::setw(13) << std::setprecision(3) << suspFL << " | "
+                << std::setw(13) << std::setprecision(3) << suspFR << " | "
+                << std::setw(13) << std::setprecision(3) << suspRL << " | "
+                << std::setw(13) << std::setprecision(3) << suspRR << " | "
                 << std::setw(11) << std::setprecision(2) << steerInput << " | "
                 << "(" << std::setprecision(1) << myCar.getWorldX() << "," << myCar.getWorldY() << ")\n";
         }
