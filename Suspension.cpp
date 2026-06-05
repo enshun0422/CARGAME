@@ -15,7 +15,9 @@ void Suspension::setSpringRate(float k) { springRate = k; }
 void Suspension::setDampingRate(float c) { dampingRate = c; }
 void Suspension::setStaticCamber(float camber) { staticCamber = camber; }
 void Suspension::setCamberGain(float gain) { camberGain = gain; }
+
 float Suspension::getCurrentCamber() const { return currentCamber; }
+float Suspension::getRestLength() const { return restlength; }
 
 float Suspension::calculateForce(float currentLength, float dt) {
 	float displacement = currentLength - restlength; // 彈簧位移 x (壓縮量)

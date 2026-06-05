@@ -64,7 +64,17 @@ public:
     Suspension(0.2f, 140000.0f, 9000.0f)  // 右後
     };
 
+	virtual ~Vehicle() = default;
+
     void setSteeringAngle(float angle);
+    void setAntiRollBarStiffnessFront(float stiffness);
+    void setAntiRollBarStiffnessRear(float stiffness);
+	void setlastSuspensionLoad(int index, float load);
+    void setCgHeight(float height);
+	void setTotalMass(float mass);
+	void setAxleDistances(float front, float rear);
+	void setHalfTrackWidth(float width);
+
     float getAntiRollBarStiffnessFront();
 	float getAntiRollBarStiffnessRear();
     float getLateralVelocity() const;
@@ -77,7 +87,7 @@ public:
     float getSuspensionLoad(int index) const;
     float getSuspensionLength(int index) const;
     
-	void update(float throttle, float brakeForce, float dt);
+	virtual void update(float throttle, float brakeForce, float dt);
     float getKPH();
 
 };

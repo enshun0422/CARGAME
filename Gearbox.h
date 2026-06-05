@@ -10,6 +10,7 @@ private:
 
 public:
     Gearbox();
+    Gearbox(const std::array<float, 8>& ratios, float finalDrive, float efficiency);
 
     // Getters (唯讀，確保 const 正確性)
     float getCurrentRatio() const;

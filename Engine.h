@@ -11,6 +11,7 @@ private:
 public:
     // 建構子：負責初始化引擎參數
     Engine();
+    Engine(float,float,const std::array<std::pair<float, float>, 7>&); // RPM、最大扭力、7組曲線資料
 
     // Getters：唯讀屬性，加上 const 確保不會修改到內部資料
     float getIdleRPM() const;
