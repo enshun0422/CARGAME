@@ -20,7 +20,9 @@ public:
 	void setDampingRate(float c);
 	void setStaticCamber(float camber);
 	void setCamberGain(float gain);
+
 	float getCurrentCamber() const;
+	float getRestLength() const;
 
 	Suspension(float rest, float k, float c);
 

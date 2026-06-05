@@ -16,6 +16,13 @@ Engine::Engine() {
         {7500, 450.0f}
     } };
 }
+Engine::Engine(float idleRPM, float maxRPM, const std::array<std::pair<float, float>, 7>& torqueCurve) // RPM、最大扭力、7組曲線資料{
+{   
+    this->idleRPM = idleRPM;
+    this->maxRPM = maxRPM;
+    this->torqueCurve = torqueCurve;
+}
+
 
 // Getters 實作
 float Engine::getIdleRPM() const {

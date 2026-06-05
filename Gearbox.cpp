@@ -9,6 +9,13 @@ Gearbox::Gearbox() {
     this->currentGear = 2; // 啟動時預設入 1 檔
 }
 
+Gearbox::Gearbox(const std::array<float, 8>& ratios, float finalDrive, float efficiency) {
+	this->gearRatios = ratios;
+	this->finalDrive = finalDrive;
+	this->efficiency = efficiency;
+	this->currentGear = 2; // 啟動時預設入 1 檔
+}
+
 // --- Getters ---
 float Gearbox::getCurrentRatio() const {
     if (currentGear < 0 || currentGear >= static_cast<int>(gearRatios.size())) {

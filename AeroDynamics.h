@@ -14,6 +14,8 @@ class AeroDynamics {
 
 		float  aeroCenterHeight = 0.52f; // 空氣動力中心高度 (m),高速車身後力矩
 	public:
+		AeroDynamics();
+		AeroDynamics(float, float, float, float, float, float);
 		float calculateDragForce(float velocity);
 
 		float calculateFrontDownforce(float velocity);

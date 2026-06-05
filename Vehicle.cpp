@@ -1,6 +1,31 @@
 ﻿#include "Vehicle.h"
 
 void Vehicle::setSteeringAngle(float angle) { steeringAngle = angle;}
+void Vehicle::setAntiRollBarStiffnessFront(float stiffness) { antiRollBarStiffnessFront = stiffness; }
+void Vehicle::setAntiRollBarStiffnessRear(float stiffness) { antiRollBarStiffnessRear = stiffness; }
+void Vehicle::setlastSuspensionLoad(int index, float length) {
+    if(index >= 0 && index < 4)
+		lastSuspensionLength[index] = length;
+}
+void Vehicle::setCgHeight(float cgheight) { this->cgHeight = cgheight; }
+void Vehicle::setTotalMass(float mass) { this->totalMass = mass; }
+void Vehicle::setAxleDistances(float front, float rear) {
+	this->cgToFrontAxle = front;
+    this->cgToRearAxle = -std::abs(rear);
+
+    tirePos_X[0] = cgToFrontAxle;
+    tirePos_X[1] = cgToFrontAxle;
+    tirePos_X[2] = cgToRearAxle;
+    tirePos_X[3] = cgToRearAxle;
+}
+void Vehicle::setHalfTrackWidth(float width) {
+	halfTrackWidth = width;
+
+	tirePos_Y[0] = -halfTrackWidth;
+	tirePos_Y[1] = halfTrackWidth;
+	tirePos_Y[2] = -halfTrackWidth;
+	tirePos_Y[3] = halfTrackWidth;
+}
 
 float Vehicle::getAntiRollBarStiffnessFront() {return antiRollBarStiffnessFront;}
 float Vehicle::getAntiRollBarStiffnessRear() {return antiRollBarStiffnessRear;}
@@ -48,7 +73,7 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         float engineRPM = baseEngineRPM;
 
         // 起步彈射與離合器滑差邏輯 (保持原樣，這段沒問題)
-        if (throttle > 0.1f && std::abs(this->forwardVelocity) < 16.6f) { // 16.6 m/s 約為 60 KPH
+        if (throttle > 0.8f && std::abs(this->forwardVelocity) < 5.0f) { // 5.0 m/s 約為 18 KPH
             float targetLaunchRPM = 4500.0f * throttle;
             if (baseEngineRPM < targetLaunchRPM) {
                 engineRPM = targetLaunchRPM;
@@ -108,7 +133,7 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
 
         // 根據車身姿態 (Pitch/Roll) 計算四個避震器的「真實壓縮量」
         // suspension[0]: 左前, [1]: 右前, [2]: 左後, [3]: 右後
-        float baseLength = 0.2f; // 預設靜態懸吊長度
+        float baseLength = suspensions[0].getRestLength(); // 預設靜態懸吊長度
         float currentLengths[4];
 
         // 幾何投影：透過車身傾斜角度，算出四個角落的懸吊被壓了多少
@@ -176,6 +201,9 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
             if (ABSActive && brakeForce > 0.0f) {
                 if (tires[i].getSlipRatio() < optimalBrakeSlip) {
                     appliedBrakeForce = 0.0f; // 釋放煞車避免鎖死
+                }
+                if (std::abs(forwardVelocity) < 4.0f) {
+                    appliedBrakeForce *= 0.4f;
                 }
             }
             tires[i].tire.setBreakingForce(appliedBrakeForce);
