@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include<string>
 #include "Engine.h"
 #include "Gearbox.h"
 #include "Suspension.h"
@@ -40,6 +41,10 @@ private:
     float lastSuspensionLoad[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     float lastSuspensionLength[4] = { 0.2f, 0.2f, 0.2f, 0.2f };
 
+	float RPM = 0.0f; // 引擎轉速 (RPM)
+    float shiftUpRPM = 7100.0f;
+    float shiftDownRPM = 3500.0f;
+
 	// 電子輔助系統狀態
 	bool ABSActive = true; // 防鎖死煞車系統 (ABS) 是否啟動
 	bool TCSActive = true; // 循跡控制系統 (TCS) 是否啟動
@@ -74,6 +79,7 @@ public:
 	void setTotalMass(float mass);
 	void setAxleDistances(float front, float rear);
 	void setHalfTrackWidth(float width);
+    void setShiftRPM(float upRPM, float downRPM);
 
     float getAntiRollBarStiffnessFront();
 	float getAntiRollBarStiffnessRear();
@@ -86,8 +92,13 @@ public:
 	float getHeadingAngle() const;
     float getSuspensionLoad(int index) const;
     float getSuspensionLength(int index) const;
+    float getShiftUpRPM() const;
+    float getShiftDownRPM() const;
+    float estimateEngineRPM(float throttle) const;
+    float getSpeedKPH() const;
     
 	virtual void update(float throttle, float brakeForce, float dt);
     float getKPH();
-
+    virtual std::string getName();
+	
 };

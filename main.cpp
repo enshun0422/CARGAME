@@ -3,21 +3,44 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include "Porsche911GT3R.h"
+#include "BMWM4GT3.h"
 #include "AMGGT3.h"
 #include "Vehicle.h"
 
 using namespace std;
 
 int main() {
-    
-    AMGGT3 myCar;
+
+    BMWM4GT3 bmw;
+    Porsche911GT3R porsche;
+    AMGGT3 amg;
+    Vehicle* carArray[3] = { &bmw, &porsche, &amg };
+
+	int choise = 0;
+	cout << "請選擇要模擬的車輛:\n";
+    cout << "1. BMW M4 GT3\n2. Porsche 911 GT3 R\n3. Mercedes-AMG GT3\n請輸入'1', '2' 或 '3': ";
+    cin >> choise;
+	Vehicle* myCar = nullptr;
+    if (choise < 1 || choise > 3) {
+        cout << "無效的選擇" << endl;
+        return 1;
+    } else if (choise == 1) {
+        myCar = carArray[0];
+    } else if (choise == 2) {
+        myCar = carArray[1];
+    } else if (choise == 3) {
+        myCar = carArray[2];
+    }
 
     float dt = 0.016f;
     float totalTime = 0.0f;
     int printInterval = 10;
 
     cout << "==========================================================================================================================================================================\n";
-    cout << "                                                    Mercedes-AMG GT3 物理引擎遙測數據主控台 (Console Telemetry)                                             \n";
+    cout << "                                                    ";
+    cout << myCar->getName();
+    cout << "物理引擎遙測數據主控台(Console Telemetry)                                             \n";
     cout << "==========================================================================================================================================================================\n";
 
     cout << setw(6) << "frame" << " | "
@@ -25,7 +48,7 @@ int main() {
         << setw(8) << "seconds" << " | "
         << setw(5) << "Gear" << " | "
         << setw(7) << "RPM" << " | "
-        << setw(14) << "car_vel(KPH)" << " | "
+        << setw(14) << "car_speed(KPH)" << " | "
         << setw(15) << "tire_vel(KPH)" << " | "
         << setw(10) << "slip_ratio" << " | "
         << setw(11) << "slip_angle" << " | "
@@ -71,65 +94,44 @@ int main() {
             brakeForce = 15000.0f; stageStatus = "[BRAKE]";
         }
 
-        int currentGearIdx = myCar.gearbox.getCurrentGear();
-        float currentSpeed = myCar.getKPH();
+        int currentGearIdx = myCar->gearbox.getCurrentGear();
+        float currentEngineRPM = myCar->estimateEngineRPM(throttle);
 
-        if (throttle > 0.1f) {
-            if (currentSpeed > 192.0f && currentGearIdx == 6) myCar.gearbox.shiftUp();
-            else if (currentSpeed > 153.0f && currentGearIdx == 5) myCar.gearbox.shiftUp();
-            else if (currentSpeed > 120.0f && currentGearIdx == 4) myCar.gearbox.shiftUp();
-            else if (currentSpeed > 92.0f && currentGearIdx == 3) myCar.gearbox.shiftUp();
-            else if (currentSpeed > 68.0f && currentGearIdx == 2) myCar.gearbox.shiftUp();
+        if (currentGearIdx >= 2) {
+            if (throttle > 0.1f && currentEngineRPM >= myCar->getShiftUpRPM() && currentGearIdx < 7) {
+                myCar->gearbox.shiftUp();
+            }
+            else if (currentEngineRPM <= myCar->getShiftDownRPM() && currentGearIdx > 2) {
+                myCar->gearbox.shiftDown();
+            }
         }
 
-        if (throttle <= 0.1f) {
-            if (currentSpeed < 192.0f && currentGearIdx == 7) myCar.gearbox.shiftDown();
-            else if (currentSpeed < 153.0f && currentGearIdx == 6) myCar.gearbox.shiftDown();
-            else if (currentSpeed < 120.0f && currentGearIdx == 5) myCar.gearbox.shiftDown();
-            else if (currentSpeed < 92.0f && currentGearIdx == 4) myCar.gearbox.shiftDown();
-            else if (currentSpeed < 68.0f && currentGearIdx == 3) myCar.gearbox.shiftDown();
-        }
-
-        myCar.setSteeringAngle(steerInput);
-        myCar.update(throttle, brakeForce, dt);
+        myCar->setSteeringAngle(steerInput);
+        myCar->update(throttle, brakeForce, dt);
 
         totalTime += dt;
 
         if (frame % printInterval == 0) {
-            float tireKPH = myCar.tires[2].tire.getTireVelocity() * 3.6f;
-            float refSpeed = max(abs(myCar.getForwardVelocity()), 1.0f);
-            float slipRatioVal = (myCar.tires[2].tire.getTireVelocity() - myCar.getForwardVelocity()) / refSpeed;
+            float tireKPH = myCar->tires[2].tire.getTireVelocity() * 3.6f;
+            float refSpeed = max(abs(myCar->getForwardVelocity()), 1.0f);
+            float slipRatioVal = (myCar->tires[2].tire.getTireVelocity() - myCar->getForwardVelocity()) / refSpeed;
             float rx_front = 1.3f;
-            float wheelVy = myCar.getLateralVelocity() + myCar.getYawRate() * rx_front;
+            float wheelVy = myCar->getLateralVelocity() + myCar->getYawRate() * rx_front;
             float slipAngleDeg = (atan2(wheelVy, refSpeed) - steerInput) * (180.0f / PI);
 
-            float suspFL = myCar.getSuspensionLength(0);
-            float suspFR = myCar.getSuspensionLength(1);
-            float suspRL = myCar.getSuspensionLength(2);
-            float suspRR = myCar.getSuspensionLength(3);
+            float suspFL = myCar->getSuspensionLength(0);
+            float suspFR = myCar->getSuspensionLength(1);
+            float suspRL = myCar->getSuspensionLength(2);
+            float suspRR = myCar->getSuspensionLength(3);
 
-            float currentGearRatio = myCar.gearbox.getCurrentRatio();
-            float drivenWheelRad = abs(myCar.tires[2].tire.getAngularVel());
-            float wheelRPM = drivenWheelRad * (60.0f / TWO_PI);
-            float baseEngineRPM = wheelRPM * abs(currentGearRatio) * myCar.gearbox.getFinalDrive();
-            float engineRPM = baseEngineRPM;
-
-            if (abs(myCar.getKPH()) < 60.0f && throttle > 0.1f) {
-                float launchRPM = myCar.engine.getMaxRPM() * 0.6f;
-                float targetLaunchRPM = myCar.engine.getIdleRPM() + throttle * (launchRPM - myCar.engine.getIdleRPM());
-                float clutchSlip = 1.0f - (abs(myCar.getKPH()) / 60.0f);
-                clutchSlip = clamp(clutchSlip, 0.0f, 1.0f);
-                engineRPM = (targetLaunchRPM * clutchSlip) + (baseEngineRPM * (1.0f - clutchSlip));
-            }
-
-            engineRPM = max(engineRPM, myCar.engine.getIdleRPM());
+            float engineRPM = myCar->estimateEngineRPM(throttle);
 
             cout << setw(6) << frame << " | "
                 << setw(8) << stageStatus << " | "
                 << setw(7) << fixed << setprecision(2) << totalTime << "s | "
-                << setw(4) << (myCar.gearbox.getCurrentGear() - 1) << "檔 | "
+                << setw(4) << (myCar->gearbox.getCurrentGear() - 1) << "檔 | "
                 << setw(7) << setprecision(0) << engineRPM << " | "
-                << setw(14) << setprecision(2) << myCar.getKPH() << " | "
+                << setw(14) << setprecision(2) << myCar->getSpeedKPH() << " | "
                 << setw(15) << tireKPH << " | "
                 << setw(10) << setprecision(4) << slipRatioVal << " | "
                 << setw(11) << setprecision(2) << slipAngleDeg << " | "
@@ -138,7 +140,7 @@ int main() {
                 << setw(13) << setprecision(3) << suspRL << " | "
                 << setw(13) << setprecision(3) << suspRR << " | "
                 << setw(11) << setprecision(2) << steerInput << " | "
-                << "(" << setprecision(1) << myCar.getWorldX() << "," << myCar.getWorldY() << ")\n";
+                << "(" << setprecision(1) << myCar->getWorldX() << "," << myCar->getWorldY() << ")\n";
         }
     }
 

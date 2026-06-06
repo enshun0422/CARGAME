@@ -26,6 +26,10 @@ void Vehicle::setHalfTrackWidth(float width) {
 	tirePos_Y[2] = -halfTrackWidth;
 	tirePos_Y[3] = halfTrackWidth;
 }
+void Vehicle::setShiftRPM(float upRPM, float downRPM) {
+    shiftUpRPM = upRPM;
+    shiftDownRPM = downRPM;
+}
 
 float Vehicle::getAntiRollBarStiffnessFront() {return antiRollBarStiffnessFront;}
 float Vehicle::getAntiRollBarStiffnessRear() {return antiRollBarStiffnessRear;}
@@ -43,6 +47,30 @@ float Vehicle::getSuspensionLoad(int index) const {
 float Vehicle::getSuspensionLength(int index) const {
     if (index < 0 || index >= 4) return 0.0f;
     return lastSuspensionLength[index];
+}
+float Vehicle::getShiftUpRPM() const { return shiftUpRPM; }
+float Vehicle::getShiftDownRPM() const { return shiftDownRPM; }
+float Vehicle::estimateEngineRPM(float throttle) const {
+    float currentGearRatio = gearbox.getCurrentRatio();
+    float drivenWheelAngularVel = tires[2].tire.getAngularVel();
+    float engineRPM = engine.getIdleRPM();
+
+    if (std::abs(currentGearRatio) > 0.01f) {
+        bool wheelDirectionMatchesGear = (drivenWheelAngularVel * currentGearRatio) >= -0.1f;
+        if (wheelDirectionMatchesGear) {
+            float wheelRPM = std::abs(drivenWheelAngularVel) * (60.0f / TWO_PI);
+            engineRPM = wheelRPM * std::abs(currentGearRatio) * gearbox.getFinalDrive();
+        }
+    }
+
+    if (throttle > 0.8f && std::abs(this->forwardVelocity) < 5.0f) {
+        float targetLaunchRPM = 4500.0f * throttle;
+        if (engineRPM < targetLaunchRPM) {
+            engineRPM = targetLaunchRPM;
+        }
+    }
+
+    return std::max(engineRPM, engine.getIdleRPM());
 }
 
 void Vehicle::update(float throttle, float brakeForce, float dt) {
@@ -62,28 +90,7 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         // ==========================================
         float currentGearRatio = gearbox.getCurrentRatio();
 
-        // 【修正 1：引擎必須與「驅動輪」的轉速綁定，而不是車速！】
-        // RWD 後驅車，我們讀取真實後輪 (tires[2]) 的旋轉角速度 (rad/s)
-        float drivenWheelRad = std::abs(tires[2].tire.getAngularVel());
-        float wheelRPM = drivenWheelRad * (60.0f / TWO_PI);
-
-        // 【修正 2：齒比加上絕對值，確保打倒檔時引擎轉速依然是正的】
-        float baseEngineRPM = wheelRPM * std::abs(currentGearRatio) * gearbox.getFinalDrive();
-
-        float engineRPM = baseEngineRPM;
-
-        // 起步彈射與離合器滑差邏輯 (保持原樣，這段沒問題)
-        if (throttle > 0.8f && std::abs(this->forwardVelocity) < 5.0f) { // 5.0 m/s 約為 18 KPH
-            float targetLaunchRPM = 4500.0f * throttle;
-            if (baseEngineRPM < targetLaunchRPM) {
-                engineRPM = targetLaunchRPM;
-            }
-        }
-
-        // 【修正 3：解除紅線封印！】
-        // 只限制最低怠速防熄火，絕對不能用 clamp 限制最高轉速。
-        // 必須讓 engineRPM 有機會突破 7500，才能觸發 Engine 裡的負扭力 (斷油保護)！
-        engineRPM = std::max(engineRPM, engine.getIdleRPM());
+        float engineRPM = estimateEngineRPM(throttle);
 
         // 【新增：TCS 循跡防滑系統介入】
         float actualThrottle = throttle;
@@ -255,13 +262,15 @@ void Vehicle::update(float throttle, float brakeForce, float dt) {
         if (brakeForce > 0.0f && std::abs(this->forwardVelocity) < 0.2f && std::abs(tires[2].tire.getAngularVel()) < 0.5f) {
             this->forwardVelocity = 0.0f;
         }
-        if (this->forwardVelocity < 0.01f && driveTorque == 0.0f && accel_X <= 0.0f) {
+        if (std::abs(this->forwardVelocity) < 0.01f && driveTorque == 0.0f && accel_X <= 0.0f) {
             this->forwardVelocity = 0.0f;
         }
 
         // 更新角速度
         float inertia_Z = 2000.0f;
-        float angularAccel_Z = total_YawTorque / inertia_Z;
+        float speedMS = std::sqrt((this->forwardVelocity * this->forwardVelocity) + (this->lateralVelocity * this->lateralVelocity));
+        float yawDampingTorque = this->yawRate * (4500.0f + speedMS * 120.0f);
+        float angularAccel_Z = (total_YawTorque - yawDampingTorque) / inertia_Z;
         this->yawRate += angularAccel_Z * subDt;
 
         // ==========================================
@@ -288,4 +297,11 @@ float Vehicle::getKPH() {
     return this->forwardVelocity * 3.6f; // m/s 轉 km/h
 }
 
+float Vehicle::getSpeedKPH() const {
+    return std::sqrt((forwardVelocity * forwardVelocity) + (lateralVelocity * lateralVelocity)) * 3.6f;
+}
+
+std::string Vehicle::getName() {
+    return "Generic Vehicle";
+}
 

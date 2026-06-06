@@ -66,7 +66,13 @@ void Tire::integrateRotation(float driveTorque, float dt) {
     float newAngularVel = angularVel + accel * dt;
 
     // 4. 數值震盪保護機制
-    // 只有在「沒有踩油門」(純煞車或純滑行) 的情況下，才防止轉速跨越 0 導致反向震盪
+    // 前進驅動扭矩不能被地面反力一次積分成倒轉；滑行/煞車也不能跨 0 震盪。
+    if (driveTorque > 0.0f && angularVel >= 0.0f && newAngularVel < 0.0f) {
+        newAngularVel = 0.0f;
+    }
+    if (driveTorque < 0.0f && angularVel <= 0.0f && newAngularVel > 0.0f) {
+        newAngularVel = 0.0f;
+    }
     if (driveTorque == 0.0f) {
         if (angularVel > 0.0f && newAngularVel < 0.0f) newAngularVel = 0.0f;
         if (angularVel < 0.0f && newAngularVel > 0.0f) newAngularVel = 0.0f;

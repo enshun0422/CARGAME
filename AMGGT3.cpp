@@ -22,6 +22,7 @@ AMGGT3::AMGGT3() {
 	setTotalMass(1285.0f);
 	setAxleDistances(1.367f, 1.262f);
 	setHalfTrackWidth(0.862f);
+	setShiftRPM(7100.0f, 4000.0f);
 
 	suspensions[0] = Suspension(0.2f, 130000.0f, 8500.0f);
 	suspensions[1] = Suspension(0.2f, 130000.0f, 8500.0f);

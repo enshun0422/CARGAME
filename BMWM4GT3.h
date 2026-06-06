@@ -2,12 +2,11 @@
 #include "Vehicle.h"
 #include <array>
 
-class AMGGT3: public Vehicle {
+class BMWM4GT3 : public Vehicle {
 
 public:
-	AMGGT3();
+	BMWM4GT3();
 	std::string getName() override {
-		return "Mercedes-AMG GT3";
+		return "BMW M4 GT3";
 	}
-
 };

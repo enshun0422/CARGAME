@@ -19,4 +19,6 @@ add_executable(CarGame
 			   Engine.cpp 
 			   Gearbox.cpp
 			   AMGGT3.cpp
+			   BMWM4GT3.cpp
+			   Porsche911GT3R.cpp
 )
