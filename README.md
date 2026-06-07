@@ -72,7 +72,7 @@ cmake --build build
 
 ## 運行截圖
 
-![運行截圖](https://github.com/user-attachments/assets/0eb4628a-588b-4111-82c3-de9ac6fd8050)
+![運行截圖](docs/runtime-screenshot.png)
 
 ## 資料彙整輸出圖
 
